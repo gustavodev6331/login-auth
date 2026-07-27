@@ -1,8 +1,11 @@
-# Enviorment varialbes
+# Environment variables
 .env
 
-instance
+# Database
+instance/
 
+# IDE
+.idea/
+
+# macOS
 .DS_Store
-
-.idea
