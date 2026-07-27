@@ -4,12 +4,13 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from hashlib import pbkdf2_hmac
-import werkzeug
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret-key-goes-here'
+app.config['SECRET_KEY'] = os.getenv('FLASK_KEY')
 
 #Creating login manager to get the surprise
 login_manager = LoginManager()
@@ -36,6 +37,9 @@ class User(UserMixin, db.Model):
 with app.app_context():
     db.create_all()
 
+def get_user_by_email(email):
+    result = db.session.execute(db.select(User).where(User.email == email))
+    return result.scalar()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -54,8 +58,7 @@ def register():
             email=request.form['email'],
             password=generate_password_hash(request.form['password'], method='pbkdf2:sha256', salt_length=8)
         )
-        result = db.session.execute(db.select(User).where(User.email == request.form['email']))
-        user = result.scalar()
+        user = get_user_by_email(new_user.email)
         if user:
             flash('Email already registered. Login instead.')
             return redirect(url_for('login'))
@@ -70,13 +73,11 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
 
-        result = db.session.execute(db.select(User).where(User.email == email))
-        user = result.scalar()
+        user = get_user_by_email(email)
         if user is None:
             flash('Incorrect email. Please try again.')
             return redirect(url_for("login"))
